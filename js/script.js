@@ -1793,6 +1793,29 @@ module.exports = false;
 
 /***/ }),
 
+/***/ "./node_modules/core-js/internals/is-regexp.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/core-js/internals/is-regexp.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var isObject = __webpack_require__(/*! ../internals/is-object */ "./node_modules/core-js/internals/is-object.js");
+var classof = __webpack_require__(/*! ../internals/classof-raw */ "./node_modules/core-js/internals/classof-raw.js");
+var wellKnownSymbol = __webpack_require__(/*! ../internals/well-known-symbol */ "./node_modules/core-js/internals/well-known-symbol.js");
+
+var MATCH = wellKnownSymbol('match');
+
+// `IsRegExp` abstract operation
+// https://tc39.es/ecma262/#sec-isregexp
+module.exports = function (it) {
+  var isRegExp;
+  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classof(it) == 'RegExp');
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/core-js/internals/iterate.js":
 /*!***************************************************!*\
   !*** ./node_modules/core-js/internals/iterate.js ***!
@@ -3781,6 +3804,63 @@ addToUnscopables('entries');
 
 /***/ }),
 
+/***/ "./node_modules/core-js/modules/es.array.join.js":
+/*!*******************************************************!*\
+  !*** ./node_modules/core-js/modules/es.array.join.js ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(/*! ../internals/export */ "./node_modules/core-js/internals/export.js");
+var IndexedObject = __webpack_require__(/*! ../internals/indexed-object */ "./node_modules/core-js/internals/indexed-object.js");
+var toIndexedObject = __webpack_require__(/*! ../internals/to-indexed-object */ "./node_modules/core-js/internals/to-indexed-object.js");
+var arrayMethodIsStrict = __webpack_require__(/*! ../internals/array-method-is-strict */ "./node_modules/core-js/internals/array-method-is-strict.js");
+
+var nativeJoin = [].join;
+
+var ES3_STRINGS = IndexedObject != Object;
+var STRICT_METHOD = arrayMethodIsStrict('join', ',');
+
+// `Array.prototype.join` method
+// https://tc39.es/ecma262/#sec-array.prototype.join
+$({ target: 'Array', proto: true, forced: ES3_STRINGS || !STRICT_METHOD }, {
+  join: function join(separator) {
+    return nativeJoin.call(toIndexedObject(this), separator === undefined ? ',' : separator);
+  }
+});
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/modules/es.array.map.js":
+/*!******************************************************!*\
+  !*** ./node_modules/core-js/modules/es.array.map.js ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__(/*! ../internals/export */ "./node_modules/core-js/internals/export.js");
+var $map = __webpack_require__(/*! ../internals/array-iteration */ "./node_modules/core-js/internals/array-iteration.js").map;
+var arrayMethodHasSpeciesSupport = __webpack_require__(/*! ../internals/array-method-has-species-support */ "./node_modules/core-js/internals/array-method-has-species-support.js");
+
+var HAS_SPECIES_SUPPORT = arrayMethodHasSpeciesSupport('map');
+
+// `Array.prototype.map` method
+// https://tc39.es/ecma262/#sec-array.prototype.map
+// with adding support of @@species
+$({ target: 'Array', proto: true, forced: !HAS_SPECIES_SUPPORT }, {
+  map: function map(callbackfn /* , thisArg */) {
+    return $map(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  }
+});
+
+
+/***/ }),
+
 /***/ "./node_modules/core-js/modules/es.array.slice.js":
 /*!********************************************************!*\
   !*** ./node_modules/core-js/modules/es.array.slice.js ***!
@@ -4750,6 +4830,152 @@ fixRegExpWellKnownSymbolLogic('replace', 2, function (REPLACE, nativeReplace, ma
     }
   ];
 });
+
+
+/***/ }),
+
+/***/ "./node_modules/core-js/modules/es.string.split.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/core-js/modules/es.string.split.js ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var fixRegExpWellKnownSymbolLogic = __webpack_require__(/*! ../internals/fix-regexp-well-known-symbol-logic */ "./node_modules/core-js/internals/fix-regexp-well-known-symbol-logic.js");
+var isRegExp = __webpack_require__(/*! ../internals/is-regexp */ "./node_modules/core-js/internals/is-regexp.js");
+var anObject = __webpack_require__(/*! ../internals/an-object */ "./node_modules/core-js/internals/an-object.js");
+var requireObjectCoercible = __webpack_require__(/*! ../internals/require-object-coercible */ "./node_modules/core-js/internals/require-object-coercible.js");
+var speciesConstructor = __webpack_require__(/*! ../internals/species-constructor */ "./node_modules/core-js/internals/species-constructor.js");
+var advanceStringIndex = __webpack_require__(/*! ../internals/advance-string-index */ "./node_modules/core-js/internals/advance-string-index.js");
+var toLength = __webpack_require__(/*! ../internals/to-length */ "./node_modules/core-js/internals/to-length.js");
+var callRegExpExec = __webpack_require__(/*! ../internals/regexp-exec-abstract */ "./node_modules/core-js/internals/regexp-exec-abstract.js");
+var regexpExec = __webpack_require__(/*! ../internals/regexp-exec */ "./node_modules/core-js/internals/regexp-exec.js");
+var stickyHelpers = __webpack_require__(/*! ../internals/regexp-sticky-helpers */ "./node_modules/core-js/internals/regexp-sticky-helpers.js");
+
+var UNSUPPORTED_Y = stickyHelpers.UNSUPPORTED_Y;
+var arrayPush = [].push;
+var min = Math.min;
+var MAX_UINT32 = 0xFFFFFFFF;
+
+// @@split logic
+fixRegExpWellKnownSymbolLogic('split', 2, function (SPLIT, nativeSplit, maybeCallNative) {
+  var internalSplit;
+  if (
+    'abbc'.split(/(b)*/)[1] == 'c' ||
+    // eslint-disable-next-line regexp/no-empty-group -- required for testing
+    'test'.split(/(?:)/, -1).length != 4 ||
+    'ab'.split(/(?:ab)*/).length != 2 ||
+    '.'.split(/(.?)(.?)/).length != 4 ||
+    // eslint-disable-next-line regexp/no-assertion-capturing-group, regexp/no-empty-group -- required for testing
+    '.'.split(/()()/).length > 1 ||
+    ''.split(/.?/).length
+  ) {
+    // based on es5-shim implementation, need to rework it
+    internalSplit = function (separator, limit) {
+      var string = String(requireObjectCoercible(this));
+      var lim = limit === undefined ? MAX_UINT32 : limit >>> 0;
+      if (lim === 0) return [];
+      if (separator === undefined) return [string];
+      // If `separator` is not a regex, use native split
+      if (!isRegExp(separator)) {
+        return nativeSplit.call(string, separator, lim);
+      }
+      var output = [];
+      var flags = (separator.ignoreCase ? 'i' : '') +
+                  (separator.multiline ? 'm' : '') +
+                  (separator.unicode ? 'u' : '') +
+                  (separator.sticky ? 'y' : '');
+      var lastLastIndex = 0;
+      // Make `global` and avoid `lastIndex` issues by working with a copy
+      var separatorCopy = new RegExp(separator.source, flags + 'g');
+      var match, lastIndex, lastLength;
+      while (match = regexpExec.call(separatorCopy, string)) {
+        lastIndex = separatorCopy.lastIndex;
+        if (lastIndex > lastLastIndex) {
+          output.push(string.slice(lastLastIndex, match.index));
+          if (match.length > 1 && match.index < string.length) arrayPush.apply(output, match.slice(1));
+          lastLength = match[0].length;
+          lastLastIndex = lastIndex;
+          if (output.length >= lim) break;
+        }
+        if (separatorCopy.lastIndex === match.index) separatorCopy.lastIndex++; // Avoid an infinite loop
+      }
+      if (lastLastIndex === string.length) {
+        if (lastLength || !separatorCopy.test('')) output.push('');
+      } else output.push(string.slice(lastLastIndex));
+      return output.length > lim ? output.slice(0, lim) : output;
+    };
+  // Chakra, V8
+  } else if ('0'.split(undefined, 0).length) {
+    internalSplit = function (separator, limit) {
+      return separator === undefined && limit === 0 ? [] : nativeSplit.call(this, separator, limit);
+    };
+  } else internalSplit = nativeSplit;
+
+  return [
+    // `String.prototype.split` method
+    // https://tc39.es/ecma262/#sec-string.prototype.split
+    function split(separator, limit) {
+      var O = requireObjectCoercible(this);
+      var splitter = separator == undefined ? undefined : separator[SPLIT];
+      return splitter !== undefined
+        ? splitter.call(separator, O, limit)
+        : internalSplit.call(String(O), separator, limit);
+    },
+    // `RegExp.prototype[@@split]` method
+    // https://tc39.es/ecma262/#sec-regexp.prototype-@@split
+    //
+    // NOTE: This cannot be properly polyfilled in engines that don't support
+    // the 'y' flag.
+    function (regexp, limit) {
+      var res = maybeCallNative(internalSplit, regexp, this, limit, internalSplit !== nativeSplit);
+      if (res.done) return res.value;
+
+      var rx = anObject(regexp);
+      var S = String(this);
+      var C = speciesConstructor(rx, RegExp);
+
+      var unicodeMatching = rx.unicode;
+      var flags = (rx.ignoreCase ? 'i' : '') +
+                  (rx.multiline ? 'm' : '') +
+                  (rx.unicode ? 'u' : '') +
+                  (UNSUPPORTED_Y ? 'g' : 'y');
+
+      // ^(? + rx + ) is needed, in combination with some S slicing, to
+      // simulate the 'y' flag.
+      var splitter = new C(UNSUPPORTED_Y ? '^(?:' + rx.source + ')' : rx, flags);
+      var lim = limit === undefined ? MAX_UINT32 : limit >>> 0;
+      if (lim === 0) return [];
+      if (S.length === 0) return callRegExpExec(splitter, S) === null ? [S] : [];
+      var p = 0;
+      var q = 0;
+      var A = [];
+      while (q < S.length) {
+        splitter.lastIndex = UNSUPPORTED_Y ? 0 : q;
+        var z = callRegExpExec(splitter, UNSUPPORTED_Y ? S.slice(q) : S);
+        var e;
+        if (
+          z === null ||
+          (e = min(toLength(splitter.lastIndex + (UNSUPPORTED_Y ? q : 0)), S.length)) === p
+        ) {
+          q = advanceStringIndex(S, q, unicodeMatching);
+        } else {
+          A.push(S.slice(p, q));
+          if (A.length === lim) return A;
+          for (var i = 1; i <= z.length - 1; i++) {
+            A.push(z[i]);
+            if (A.length === lim) return A;
+          }
+          q = p = e;
+        }
+      }
+      A.push(S.slice(p));
+      return A;
+    }
+  ];
+}, UNSUPPORTED_Y);
 
 
 /***/ }),
@@ -6422,12 +6648,24 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var core_js_modules_web_timers_js__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_timers_js__WEBPACK_IMPORTED_MODULE_6__);
 /* harmony import */ var core_js_modules_es_function_bind_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! core-js/modules/es.function.bind.js */ "./node_modules/core-js/modules/es.function.bind.js");
 /* harmony import */ var core_js_modules_es_function_bind_js__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_function_bind_js__WEBPACK_IMPORTED_MODULE_7__);
-/* harmony import */ var _module_menu__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./module/menu */ "./src/js/module/menu.js");
-/* harmony import */ var _module_tabs__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./module/tabs */ "./src/js/module/tabs.js");
-/* harmony import */ var _module_dropdown__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./module/dropdown */ "./src/js/module/dropdown.js");
-/* harmony import */ var _module_order__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./module/order */ "./src/js/module/order.js");
-/* harmony import */ var _module_forms__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./module/forms */ "./src/js/module/forms.js");
-/* harmony import */ var _module_paymentSection__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./module/paymentSection */ "./src/js/module/paymentSection.js");
+/* harmony import */ var core_js_modules_es_array_join_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! core-js/modules/es.array.join.js */ "./node_modules/core-js/modules/es.array.join.js");
+/* harmony import */ var core_js_modules_es_array_join_js__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_array_join_js__WEBPACK_IMPORTED_MODULE_8__);
+/* harmony import */ var core_js_modules_es_array_map_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! core-js/modules/es.array.map.js */ "./node_modules/core-js/modules/es.array.map.js");
+/* harmony import */ var core_js_modules_es_array_map_js__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_array_map_js__WEBPACK_IMPORTED_MODULE_9__);
+/* harmony import */ var core_js_modules_es_regexp_exec_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! core-js/modules/es.regexp.exec.js */ "./node_modules/core-js/modules/es.regexp.exec.js");
+/* harmony import */ var core_js_modules_es_regexp_exec_js__WEBPACK_IMPORTED_MODULE_10___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_regexp_exec_js__WEBPACK_IMPORTED_MODULE_10__);
+/* harmony import */ var core_js_modules_es_string_split_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! core-js/modules/es.string.split.js */ "./node_modules/core-js/modules/es.string.split.js");
+/* harmony import */ var core_js_modules_es_string_split_js__WEBPACK_IMPORTED_MODULE_11___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_string_split_js__WEBPACK_IMPORTED_MODULE_11__);
+/* harmony import */ var _module_menu__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./module/menu */ "./src/js/module/menu.js");
+/* harmony import */ var _module_tabs__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./module/tabs */ "./src/js/module/tabs.js");
+/* harmony import */ var _module_dropdown__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./module/dropdown */ "./src/js/module/dropdown.js");
+/* harmony import */ var _module_order__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./module/order */ "./src/js/module/order.js");
+/* harmony import */ var _module_forms__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./module/forms */ "./src/js/module/forms.js");
+/* harmony import */ var _module_paymentSection__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./module/paymentSection */ "./src/js/module/paymentSection.js");
+
+
+
+
 
 
 
@@ -6445,18 +6683,18 @@ __webpack_require__.r(__webpack_exports__);
 window.addEventListener('DOMContentLoaded', function () {
   // const contentURL = 'http://localhost:3004/dishes';
   var contentURL = 'https://my-json-server.typicode.com/Rampfard/jsonserver/dishes';
-  Object(_module_forms__WEBPACK_IMPORTED_MODULE_12__["default"])();
-  var mainMenu = new _module_menu__WEBPACK_IMPORTED_MODULE_8__["default"]({
+  Object(_module_forms__WEBPACK_IMPORTED_MODULE_16__["default"])();
+  var mainMenu = new _module_menu__WEBPACK_IMPORTED_MODULE_12__["default"]({
     elementSelector: '.nav__list-item',
     activeClass: 'nav-active',
     screenContainer: '.main__container'
   }).init();
-  var settingsMenu = new _module_menu__WEBPACK_IMPORTED_MODULE_8__["default"]({
+  var settingsMenu = new _module_menu__WEBPACK_IMPORTED_MODULE_12__["default"]({
     elementSelector: '.main-settings__menu-item',
     activeClass: 'menu-item__active',
     indicatorSelector: '.side__indicator'
   }).init();
-  var homeTabs = new _module_tabs__WEBPACK_IMPORTED_MODULE_9__["default"]({
+  var homeTabs = new _module_tabs__WEBPACK_IMPORTED_MODULE_13__["default"]({
     headerSelector: '.home-tabs',
     tabSelector: '.home-tab',
     activeClass: 'tab-active',
@@ -6467,7 +6705,7 @@ window.addEventListener('DOMContentLoaded', function () {
     contentType: 'content',
     contentURL: contentURL
   }).init();
-  var settingsManagementTabs = new _module_tabs__WEBPACK_IMPORTED_MODULE_9__["default"]({
+  var settingsManagementTabs = new _module_tabs__WEBPACK_IMPORTED_MODULE_13__["default"]({
     headerSelector: '.management-tabs',
     tabSelector: '.management-tab',
     activeClass: 'item-active',
@@ -6475,28 +6713,28 @@ window.addEventListener('DOMContentLoaded', function () {
     contentItemClasses: ['content-card', 'card-management'],
     contentURL: contentURL
   }).init();
-  var menuDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_10__["default"]({
+  var menuDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_14__["default"]({
     btnSelector: '#menu-dropdown',
     contentSelector: '.menu-dropdown .dropdown__content'
   }).init();
-  var filterDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_10__["default"]({
+  var filterDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_14__["default"]({
     btnSelector: '#filter-dropdown',
     contentSelector: '.filter-dropdown .dropdown__content'
   }).init();
-  var MostOrderedDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_10__["default"]({
+  var MostOrderedDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_14__["default"]({
     btnSelector: '#most-ordered-dropdown',
     contentSelector: '.time-period__dropdown .dropdown__content'
   }).init();
-  var MostOrderedTypeDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_10__["default"]({
+  var MostOrderedTypeDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_14__["default"]({
     btnSelector: '#most-ordered-type__dropdown',
     contentSelector: '.time-period-type__dropdown .dropdown__content'
   }).init();
-  var paymentDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_10__["default"]({
+  var paymentDropdown = new _module_dropdown__WEBPACK_IMPORTED_MODULE_14__["default"]({
     btnSelector: '#dropdownPayment',
     contentSelector: '.payment-dropdown .dropdown__content'
   }).init(); // Payment Section
 
-  Object(_module_paymentSection__WEBPACK_IMPORTED_MODULE_13__["default"])({
+  Object(_module_paymentSection__WEBPACK_IMPORTED_MODULE_17__["default"])({
     showBtnClass: '#continueBtn',
     hideBtnClass: '#cancelPayment',
     firstSectionClass: '.order',
@@ -6562,7 +6800,7 @@ window.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      Object(_module_order__WEBPACK_IMPORTED_MODULE_11__["updateOrder"])(cart, contentURL);
+      Object(_module_order__WEBPACK_IMPORTED_MODULE_15__["updateOrder"])(cart, contentURL);
     }
   }
 
@@ -6594,7 +6832,7 @@ window.addEventListener('DOMContentLoaded', function () {
       updateLS();
     }
 
-    Object(_module_order__WEBPACK_IMPORTED_MODULE_11__["updateOrder"])(cart, contentURL);
+    Object(_module_order__WEBPACK_IMPORTED_MODULE_15__["updateOrder"])(cart, contentURL);
   } // Example cards on Home section
 
 
@@ -6692,6 +6930,12 @@ window.addEventListener('DOMContentLoaded', function () {
   }
 
   graph();
+  var labels = document.querySelectorAll('.form-control label');
+  labels.forEach(function (label) {
+    label.innerHTML = label.innerText.split('').map(function (letter, i) {
+      return "<span style=\"transition-delay: ".concat(i * 30, "ms\">").concat(letter, "</span>");
+    }).join('');
+  });
 });
 
 /***/ }),
