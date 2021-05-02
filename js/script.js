@@ -6742,32 +6742,16 @@ window.addEventListener('DOMContentLoaded', function () {
     secondSectionClass: '.order-payment',
     secondActiveClass: 'payment-active',
     overlayClass: '.overlay'
-  }); //Side Buttons
+  }); // Prevent user to close the order section by "Back" button
 
-  var orderSection = document.querySelector('.order');
-  var sideBar = document.querySelector('.side-bar');
-  var showOrderBtn = document.querySelector('#show-order');
-  var showMenuBtn = document.querySelector('#show-menu');
+  window.addEventListener("beforeunload", function (e) {
+    var order = document.querySelector('.order');
 
-  function toggleHideSection(trigger, sectionClass, sectionActiveClass) {
-    var overlay = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
-    trigger.addEventListener('click', function (e) {
+    if (order.classList.contains('show')) {
       e.preventDefault();
-      sectionClass.classList.toggle(sectionActiveClass);
-
-      if (overlay) {
-        document.querySelector('.overlay').classList.toggle('overlay-show');
-
-        if (window.matchMedia("(max-width: 460px)").matches) {
-          document.querySelector('.side-bar').classList.remove('show');
-          document.querySelector('.side-bar').classList.toggle('side-bar__hide');
-        }
-      }
-    });
-  }
-
-  toggleHideSection(showOrderBtn, orderSection, 'show');
-  toggleHideSection(showMenuBtn, sideBar, 'show', false); // Date
+      e.returnValue = '';
+    }
+  }); // Date
 
   var dateEl = document.querySelectorAll('.date');
 
@@ -6797,6 +6781,7 @@ window.addEventListener('DOMContentLoaded', function () {
       cart = JSON.parse(localStorage.getItem('cart'));
 
       if (Object.keys(cart).length < 1) {
+        localStorage.removeItem('cart');
         return;
       }
 
@@ -6837,9 +6822,9 @@ window.addEventListener('DOMContentLoaded', function () {
 
 
   function activeExampleCards() {
-    var cards = document.querySelectorAll('.content-card');
-    var cardBtns = document.querySelectorAll('.content-card__btn');
     var mainWrapper = document.querySelector('.main-home__wrapper');
+    var cards = mainWrapper.querySelectorAll('.content-card');
+    var cardBtns = document.querySelectorAll('.content-card__btn');
 
     function removeActiveClass(elements, activeClass) {
       elements.forEach(function (el) {
@@ -6935,7 +6920,117 @@ window.addEventListener('DOMContentLoaded', function () {
     label.innerHTML = label.innerText.split('').map(function (letter, i) {
       return "<span style=\"transition-delay: ".concat(i * 30, "ms\">").concat(letter, "</span>");
     }).join('');
-  });
+  }); //Side Buttons
+
+  var orderSection = document.querySelector('.order');
+  var sideBar = document.querySelector('.side-bar');
+  var showOrderBtn = document.querySelector('#show-order');
+  var showMenuBtn = document.querySelector('#show-menu');
+
+  function toggleHideSection(trigger, sectionClass, sectionActiveClass) {
+    var overlay = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      sectionClass.classList.toggle(sectionActiveClass);
+
+      if (overlay) {
+        document.querySelector('.overlay').classList.toggle('overlay-show');
+
+        if (window.matchMedia('(max-width: 460px)').matches) {
+          document.querySelector('.side-bar').classList.remove('show');
+          document.querySelector('.side-bar').classList.toggle('side-bar__hide');
+        }
+      }
+    });
+  }
+
+  toggleHideSection(showOrderBtn, orderSection, 'show');
+  toggleHideSection(showMenuBtn, sideBar, 'show', false);
+
+  function swipe(triggerSection, activeSection, activeClass) {
+    var sensitivity = 50;
+    var touchStart = null;
+    var touchPosition = null;
+    triggerSection.addEventListener('touchstart', function (e) {
+      return TouchStart(e);
+    });
+    triggerSection.addEventListener('touchmove', function (e) {
+      return TouchMove(e);
+    });
+    triggerSection.addEventListener('touchend', function (e) {
+      return TouchEnd(e);
+    });
+    triggerSection.addEventListener('touchcancel', function (e) {
+      return TouchEnd(e);
+    });
+
+    function TouchStart(e) {
+      touchStart = {
+        x: e.changedTouches[0].clientX,
+        y: e.changedTouches[0].clientY
+      };
+      touchPosition = {
+        x: touchStart.x,
+        y: touchStart.y
+      };
+    }
+
+    function TouchMove(e) {
+      touchPosition = {
+        x: e.changedTouches[0].clientX,
+        y: e.changedTouches[0].clientY
+      };
+    }
+
+    function TouchEnd(e) {
+      CheckAction(e);
+      touchStart = null;
+      touchPosition = null;
+    }
+
+    function CheckAction(e) {
+      var d = {
+        x: touchStart.x - touchPosition.x,
+        y: touchStart.y - touchPosition.y
+      };
+
+      if (touchStart.x > 130 || e.target.classList.contains('overlay')) {
+        return;
+      }
+
+      var msg = ""; //Сообщение
+
+      if (Math.abs(d.x) > Math.abs(d.y)) {
+        //Проверяем, движение по какой оси было длиннее
+        if (Math.abs(d.x) > sensitivity) {
+          //Проверяем, было ли движение достаточно длинным
+          if (d.x > 0) {
+            //Если значение больше нуля, значит пользователь двигал пальцем справа налево
+            msg = "Swipe Left"; // console.log(msg);
+
+            activeSection.classList.remove(activeClass);
+          } else {
+            //Иначе он двигал им слева направо
+            msg = "Swipe Right"; // console.log(msg);
+
+            activeSection.classList.add(activeClass);
+          }
+        }
+      } else {
+        if (Math.abs(d.y) > sensitivity) {
+          if (d.y > 0) {
+            //Свайп вверх
+            msg = "Swipe up"; // console.log(msg);
+          } else {
+            //Свайп вниз
+            msg = "Swipe down"; // console.log(msg);
+          }
+        }
+      }
+    }
+  }
+
+  swipe(document.body, sideBar, 'show');
 });
 
 /***/ }),
@@ -7037,7 +7132,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var core_js_modules_es_promise_js__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_promise_js__WEBPACK_IMPORTED_MODULE_3__);
 /* harmony import */ var core_js_modules_es_promise_finally_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! core-js/modules/es.promise.finally.js */ "./node_modules/core-js/modules/es.promise.finally.js");
 /* harmony import */ var core_js_modules_es_promise_finally_js__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_es_promise_finally_js__WEBPACK_IMPORTED_MODULE_4__);
-/* harmony import */ var _components_request__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../components/request */ "./src/js/components/request.js");
+/* harmony import */ var core_js_modules_web_timers_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! core-js/modules/web.timers.js */ "./node_modules/core-js/modules/web.timers.js");
+/* harmony import */ var core_js_modules_web_timers_js__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(core_js_modules_web_timers_js__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _components_request__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../components/request */ "./src/js/components/request.js");
+
 
 
 
@@ -7074,10 +7172,20 @@ function forms() {
         t[inputName] = input.value;
       });
       b.push(t);
-      Object(_components_request__WEBPACK_IMPORTED_MODULE_5__["postData"])('server.php', b).then(function (res) {
+      Object(_components_request__WEBPACK_IMPORTED_MODULE_6__["postData"])('server.php', b).then(function (res) {
         console.log(JSON.parse(res));
       })["catch"]()["finally"](function () {
         clearInputs();
+        var kitty = document.createElement('div');
+        kitty.classList.add('kitty');
+        kitty.innerHTML = "\n                        <img src=\"images/kitty.png\" alt=\"kitty\">\n                    ";
+        document.body.appendChild(kitty);
+        setTimeout(function () {
+          return kitty.style.animation = 'fadeDown .4s';
+        }, 3000);
+        setTimeout(function () {
+          return kitty.remove();
+        }, 3400);
       });
     });
   });
@@ -7123,8 +7231,7 @@ function forms() {
             case 'SELECT':
               state[prop] = item.value;
               break;
-          } // console.log(state);
-
+          }
         });
       });
     }
